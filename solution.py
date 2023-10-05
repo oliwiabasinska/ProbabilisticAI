@@ -45,6 +45,7 @@ class Model(object):
         # TODO: Use your GP to estimate the posterior mean and stddev for each city_area here
         gp_mean = np.zeros(test_x_2D.shape[0], dtype=float)
         gp_std = np.zeros(test_x_2D.shape[0], dtype=float)
+        gp_mean,gpr_std = gpr.predict(test_x_2D, return_std=True)
 
         # TODO: Use the GP posterior to form your predictions here
         predictions = gp_mean
@@ -59,7 +60,9 @@ class Model(object):
         """
 
         # TODO: Fit your model here
-        pass
+        kernel = (2.0**2* RBF(length_scale=100.0)* ExpSineSquared(length_scale=1.0, periodicity=1.0, periodicity_bounds="fixed"))+0.1**2 * RBF(length_scale=0.1) + WhiteKernel(noise_level=0.1**2, noise_level_bounds=(1e-5, 1e5))
+        gpr = GaussianProcessRegressor(kernel=kernel,random_state=0).fit(train_x_2D, train_y)
+        return gpr
 
 # You don't have to change this function
 def cost_function(ground_truth: np.ndarray, predictions: np.ndarray, AREA_idxs: np.ndarray) -> float:
@@ -178,8 +181,10 @@ def extract_city_area_information(train_x: np.ndarray, test_x: np.ndarray) -> ty
     test_x_AREA = np.zeros((test_x.shape[0],), dtype=bool)
 
     #TODO: Extract the city_area information from the training and test features
-    train_x_2D = train_x[:,[0,1]]
-    train_x_AREA = np.array([row[2] for row in train_x])
+    #Subsample from train_x
+    subsampled = train_x[np.random.randint(train_x.shape[0],size=1000)]
+    train_x_2D = subsampled[:,[0,1]]
+    train_x_AREA = np.array([row[2] for row in subsampled])
     test_x_2D = test_x[:,[0,1]]
     test_x_AREA = np.array([row[2] for row in test_x])
 
