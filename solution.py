@@ -60,8 +60,12 @@ class Model(object):
         """
 
         # TODO: Fit your model here
-        kernel = (2.0**2* RBF(length_scale=100.0)* ExpSineSquared(length_scale=1.0, periodicity=1.0, periodicity_bounds="fixed"))+0.1**2 * RBF(length_scale=0.1) + WhiteKernel(noise_level=0.1**2, noise_level_bounds=(1e-5, 1e5))
-        gpr = GaussianProcessRegressor(kernel=kernel,random_state=0).fit(train_x_2D, train_y)
+        subsampled_indices = np.random.randint(train_x_2D.shape[0],size=200)
+        subsampled_x = train_x_2D[subsampled_indices]
+        subsampled_y = train_y[subsampled_indices]
+
+        kernel = RBF(length_scale=0.000001)
+        gpr = GaussianProcessRegressor(kernel=kernel,random_state=0).fit(subsampled_x, subsampled_y)
         return gpr
 
 # You don't have to change this function
@@ -182,9 +186,8 @@ def extract_city_area_information(train_x: np.ndarray, test_x: np.ndarray) -> ty
 
     #TODO: Extract the city_area information from the training and test features
     #Subsample from train_x
-    subsampled = train_x[np.random.randint(train_x.shape[0],size=1000)]
-    train_x_2D = subsampled[:,[0,1]]
-    train_x_AREA = np.array([row[2] for row in subsampled])
+    train_x_2D = train_x[:,[0,1]]
+    train_x_AREA = np.array([row[2] for row in train_x])
     test_x_2D = test_x[:,[0,1]]
     test_x_AREA = np.array([row[2] for row in test_x])
 
