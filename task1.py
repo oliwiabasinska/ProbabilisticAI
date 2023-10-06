@@ -43,9 +43,7 @@ class Model(object):
         """
 
         # TODO: Use your GP to estimate the posterior mean and stddev for each city_area here
-        gp_mean = np.zeros(test_x_2D.shape[0], dtype=float)
-        gp_std = np.zeros(test_x_2D.shape[0], dtype=float)
-        gp_mean,gpr_std = gpr.predict(test_x_2D, return_std=True)
+        gp_mean,gp_std = self.gpr.predict(test_x_2D, return_std=True)
 
         # TODO: Use the GP posterior to form your predictions here
         predictions = gp_mean
@@ -64,9 +62,8 @@ class Model(object):
         subsampled_x = train_x_2D[subsampled_indices]
         subsampled_y = train_y[subsampled_indices]
 
-        kernel = RBF(length_scale=0.000001)
-        gpr = GaussianProcessRegressor(kernel=kernel,random_state=0).fit(subsampled_x, subsampled_y)
-        return gpr
+        kernel = RBF(length_scale=0.3)
+        self.gpr = GaussianProcessRegressor(kernel=kernel,random_state=0).fit(subsampled_x, subsampled_y)
 
 # You don't have to change this function
 def cost_function(ground_truth: np.ndarray, predictions: np.ndarray, AREA_idxs: np.ndarray) -> float:
