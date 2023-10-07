@@ -1,5 +1,6 @@
 import os
 import typing
+from sklearn.model_selection import KFold
 from sklearn.gaussian_process.kernels import *
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
@@ -51,6 +52,50 @@ class Model(object):
         predictions = gp_mean
 
         return predictions, gp_mean, gp_std
+    
+    # cross val for kernel
+
+    def cross_val(self, kernels, X, y, k):
+        """
+            Return the best kernel from cross validation over K folds.
+            :param X: training data (NUM_SAMPLES, 2)
+            :param y: training labels (NUM_SAMPLES,)
+            :return:
+                best kernel
+            """
+
+        n_folds = k
+
+        score_mat = np.zeros((n_folds, len(kernels)))
+
+        print("----> initialize Kfold")
+        kf = KFold(n_splits = n_folds, shuffle = True, random_state = 0)
+
+        print("----> Entering loop...")
+        for i, (train_index, test_index) in enumerate(kf.split(X)):
+            print("----------- Fold {} ----------".format(i))
+            X_train, X_test  = X[train_index], X[test_index]
+            y_train, y_test = y[train_index], y[test_index]
+
+            for j in range(len(kernels)):
+                kern = kernels[j]
+                print("Kernel is", kern)
+                model = GaussianProcessRegressor(kernel=kern,
+                                                random_state=0, 
+                                                n_restarts_optimizer = 5).fit(X_train, y_train)
+
+                R2_score = model.score(X_test, y_test)
+                score_mat[i,j] = R2_score
+
+        print("Score matrix", score_mat)
+        avg_score = np.mean(score_mat, axis = 0)    
+        print("Average score", avg_score) # choose kernel maximising R2
+
+        index_max = np.argmax(avg_score)
+        print("Final chosen kernel based on CV will be", kernels[index_max])
+
+        return kernels[index_max]
+
 
     def fitting_model(self, train_y: np.ndarray,train_x_2D: np.ndarray):
         """
@@ -60,13 +105,17 @@ class Model(object):
         """
 
         # TODO: Fit your model here
-        print("Shape of trianing data", train_x_2D.shape)
+        print("Shape of training data", train_x_2D.shape)
 
-        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 1000)
+        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 200)
         subsampled_x = train_x_2D[subsampled_indices]
         subsampled_y = train_y[subsampled_indices]
 
-        kernel = RBF(length_scale=0.3) + WhiteKernel()
+        # uncomment to run cross validation
+        #kernels = [ DotProduct(), ExpSineSquared(), RBF(), Matern(), RationalQuadratic() ]
+        #kernel = self.cross_val(kernels, subsampled_x, subsampled_y, 5) # get best kernel from cross validation
+
+        kernel = RationalQuadratic() #+ WhiteKernel()
 
         self.gpr = GaussianProcessRegressor(kernel=kernel,
                                             random_state=0, 
