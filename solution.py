@@ -29,6 +29,7 @@ class Model(object):
         We already provide a random number generator for reproducibility.
         """
         self.rng = np.random.default_rng(seed=0)
+        self.gpr = GaussianProcessRegressor()
 
         # TODO: Add custom initialization for your model here if necessary
 
@@ -43,7 +44,8 @@ class Model(object):
         """
 
         # TODO: Use your GP to estimate the posterior mean and stddev for each city_area here
-        gp_mean,gp_std = self.gpr.predict(test_x_2D, return_std=True)
+        print("Trained GPR has", self.gpr.kernel_, "and marginal log likelihood", self.gpr.log_marginal_likelihood_value_)
+        gp_mean, gp_std = self.gpr.predict(test_x_2D, return_std=True)
 
         # TODO: Use the GP posterior to form your predictions here
         predictions = gp_mean
@@ -58,12 +60,25 @@ class Model(object):
         """
 
         # TODO: Fit your model here
-        subsampled_indices = np.random.randint(train_x_2D.shape[0],size=200)
+        print("Shape of trianing data", train_x_2D.shape)
+
+        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 1000)
         subsampled_x = train_x_2D[subsampled_indices]
         subsampled_y = train_y[subsampled_indices]
 
-        kernel = RBF(length_scale=0.3)
-        self.gpr = GaussianProcessRegressor(kernel=kernel,random_state=0).fit(subsampled_x, subsampled_y)
+        kernel = RBF(length_scale=0.3) + WhiteKernel()
+
+        self.gpr = GaussianProcessRegressor(kernel=kernel,
+                                            random_state=0, 
+                                            n_restarts_optimizer = 5).fit(subsampled_x, subsampled_y)
+        
+        #print("Predictions post training")
+        #gp_mean, gp_std = self.gpr.predict(train_y, return_std=True)
+        #print("predictions on training data", gp_mean)
+
+        
+        print("Kernel optimized params", self.gpr.kernel_, 
+              "with log marginal likelihood", self.gpr.log_marginal_likelihood_value_ )
 
 # You don't have to change this function
 def cost_function(ground_truth: np.ndarray, predictions: np.ndarray, AREA_idxs: np.ndarray) -> float:
