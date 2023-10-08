@@ -59,6 +59,7 @@ def posterior_probs(x):
 
 """ """
 
+#this is just a comment added by Christoph to check whether Git is working
 
 def main():
     """ sample from Laplace dist """
