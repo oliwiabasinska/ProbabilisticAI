@@ -45,7 +45,8 @@ class Model(object):
         """
 
         # TODO: Use your GP to estimate the posterior mean and stddev for each city_area here
-        print("Trained GPR has", self.gpr.kernel_, "and marginal log likelihood", self.gpr.log_marginal_likelihood_value_)
+        print("Trained GPR has", self.gpr.kernel_, 
+              "and marginal log likelihood", self.gpr.log_marginal_likelihood_value_)
         gp_mean, gp_std = self.gpr.predict(test_x_2D, return_std=True)
 
         # TODO: Use the GP posterior to form your predictions here
@@ -82,10 +83,10 @@ class Model(object):
                 print("Kernel is", kern)
                 model = GaussianProcessRegressor(kernel=kern,
                                                 random_state=0, 
-                                                n_restarts_optimizer = 5).fit(X_train, y_train)
+                                                n_restarts_optimizer = 3).fit(X_train, y_train)
 
-                R2_score = model.score(X_test, y_test)
-                score_mat[i,j] = R2_score
+                score = model.log_marginal_likelihood_value_ 
+                score_mat[i,j] = score
 
         print("Score matrix", score_mat)
         avg_score = np.mean(score_mat, axis = 0)    
@@ -107,24 +108,29 @@ class Model(object):
         # TODO: Fit your model here
         print("Shape of training data", train_x_2D.shape)
 
-        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 200)
+        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 1500)
         subsampled_x = train_x_2D[subsampled_indices]
         subsampled_y = train_y[subsampled_indices]
 
-        # uncomment to run cross validation
-        #kernels = [ DotProduct(), ExpSineSquared(), RBF(), Matern(), RationalQuadratic() ]
+        plt.violinplot([train_x_2D[:,0],subsampled_x[:,0]])
+        plt.savefig("Ion for train vs subsampled train")
+        plt.clf()
+
+        plt.violinplot([train_x_2D[:,1],subsampled_x[:,1]])
+        plt.savefig("Lat for train vs subsampled train")
+
+
+        # ---- uncomment to run cross-validation
+        #kernels = np.array([ DotProduct(), ExpSineSquared(), RBF(), Matern(), RationalQuadratic() ]) + WhiteKernel() + ConstantKernel()
         #kernel = self.cross_val(kernels, subsampled_x, subsampled_y, 5) # get best kernel from cross validation
 
-        kernel = RationalQuadratic() #+ WhiteKernel()
-
+        kernel = RBF(length_scale=1) + DotProduct() #ConstantKernel() #+ WhiteKernel() 
+        noise_std = 10
         self.gpr = GaussianProcessRegressor(kernel=kernel,
                                             random_state=0, 
+                                            alpha = noise_std**2,
                                             n_restarts_optimizer = 5).fit(subsampled_x, subsampled_y)
         
-        #print("Predictions post training")
-        #gp_mean, gp_std = self.gpr.predict(train_y, return_std=True)
-        #print("predictions on training data", gp_mean)
-
         
         print("Kernel optimized params", self.gpr.kernel_, 
               "with log marginal likelihood", self.gpr.log_marginal_likelihood_value_ )
@@ -239,18 +245,24 @@ def extract_city_area_information(train_x: np.ndarray, test_x: np.ndarray) -> ty
     :param test_x: Test features
     :return: Tuple of (training features' 2D coordinates, training features' city_area information,
         test features' 2D coordinates, test features' city_area information)
-    """
+    """    
+    
     train_x_2D = np.zeros((train_x.shape[0], 2), dtype=float)
     train_x_AREA = np.zeros((train_x.shape[0],), dtype=bool)
     test_x_2D = np.zeros((test_x.shape[0], 2), dtype=float)
     test_x_AREA = np.zeros((test_x.shape[0],), dtype=bool)
 
     #TODO: Extract the city_area information from the training and test features
-    #Subsample from train_x
+    
+    # --- shuffle the data? ------
+    #np.random.seed(43)
+    #np.random.shuffle(train_x)
+    #np.random.shuffle(test_x)
+
     train_x_2D = train_x[:,[0,1]]
-    train_x_AREA = np.array([row[2] for row in train_x])
+    train_x_AREA = train_x[:, 2] 
     test_x_2D = test_x[:,[0,1]]
-    test_x_AREA = np.array([row[2] for row in test_x])
+    test_x_AREA = test_x[:, 2] 
 
     assert train_x_2D.shape[0] == train_x_AREA.shape[0] and test_x_2D.shape[0] == test_x_AREA.shape[0]
     assert train_x_2D.shape[1] == 2 and test_x_2D.shape[1] == 2
@@ -272,10 +284,34 @@ def main():
     model = Model()
     model.fitting_model(train_y,train_x_2D)
 
+
     # Predict on the test features
     print('Predicting on test features')
     predictions = model.make_predictions(test_x_2D, test_x_AREA)
     print(predictions)
+
+    # make plots for exploratory data analysis
+
+    plt.violinplot((predictions[0], train_y))
+    plt.savefig("predictions distribution.png")
+    plt.clf()
+
+    plt.scatter(train_x_2D[:,0], train_y)
+    plt.savefig("[ion] vs pm25.png")
+    plt.clf()
+
+    plt.scatter(train_x_2D[:,1], train_y)
+    plt.savefig("lat vs pm25.png")
+    plt.clf()
+
+
+
+    #plt.violinplot((train_x_2D[:,0], test_x_2D[:,0]))
+    #plt.savefig("Ions distribution for training and test data.png")
+    #plt.clf()
+
+    #plt.violinplot((train_x_2D[:,1], test_x_2D[:,1]))
+    #plt.savefig("Latitude distribution for training and test data.png")
 
     if EXTENDED_EVALUATION:
         perform_extended_evaluation(model, output_dir='.')
