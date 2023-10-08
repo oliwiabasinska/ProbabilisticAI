@@ -108,7 +108,7 @@ class Model(object):
         # TODO: Fit your model here
         print("Shape of training data", train_x_2D.shape)
 
-        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 1500)
+        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 1000)
         subsampled_x = train_x_2D[subsampled_indices]
         subsampled_y = train_y[subsampled_indices]
 
@@ -121,10 +121,11 @@ class Model(object):
 
 
         # ---- uncomment to run cross-validation
-        #kernels = np.array([ DotProduct(), ExpSineSquared(), RBF(), Matern(), RationalQuadratic() ]) + WhiteKernel() + ConstantKernel()
+        length_scale_bounds=(1e-05, 10000000.0)
+        #kernels = np.array([ DotProduct(), ExpSineSquared(length_scale_bounds=length_scale_bounds), RBF(length_scale_bounds=length_scale_bounds), Matern(length_scale_bounds=length_scale_bounds), RationalQuadratic(length_scale_bounds=length_scale_bounds) ]) + WhiteKernel() + ConstantKernel()
         #kernel = self.cross_val(kernels, subsampled_x, subsampled_y, 5) # get best kernel from cross validation
 
-        kernel = RBF(length_scale=1) + DotProduct() #ConstantKernel() #+ WhiteKernel() 
+        kernel = RBF(length_scale_bounds=length_scale_bounds)*DotProduct() + ConstantKernel() + WhiteKernel() 
         noise_std = 10
         self.gpr = GaussianProcessRegressor(kernel=kernel,
                                             random_state=0, 
@@ -287,7 +288,6 @@ def main():
     model = Model()
     model.fitting_model(train_y,train_x_2D)
 
-
     # Predict on the test features
     print('Predicting on test features')
     predictions = model.make_predictions(test_x_2D, test_x_AREA)
@@ -295,19 +295,31 @@ def main():
 
     # make plots for exploratory data analysis
 
+    predictions_x = model.make_predictions(train_x_2D, train_x_AREA) # predictions on the train set itself
+
     plt.violinplot((predictions[0], train_y))
     plt.savefig("predictions distribution.png")
     plt.clf()
 
-    plt.scatter(train_x_2D[:,0], train_y)
-    plt.savefig("[ion] vs pm25.png")
+    plt.violinplot((predictions_x[0], train_y))
+    plt.savefig("predictions made on train_x, vs the actual labels train_y.png")
     plt.clf()
 
-    plt.scatter(train_x_2D[:,1], train_y)
-    plt.savefig("lat vs pm25.png")
+    plt.violinplot((train_x_2D[:,0], test_x_2D[:,0]))
+    plt.savefig("Ion concentration on train vs test data.png")
     plt.clf()
 
+    plt.violinplot((train_x_2D[:,1], test_x_2D[:,1]))
+    plt.savefig("Lat on train vs test data.png")
+    plt.clf()
 
+    #plt.scatter(train_x_2D[:,0], train_y)
+    #plt.savefig("[ion] vs pm25.png")
+    #plt.clf()
+
+    #plt.scatter(train_x_2D[:,1], train_y)
+    #plt.savefig("lat vs pm25.png")
+    #plt.clf()
 
     #plt.violinplot((train_x_2D[:,0], test_x_2D[:,0]))
     #plt.savefig("Ions distribution for training and test data.png")
