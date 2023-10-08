@@ -253,11 +253,6 @@ def extract_city_area_information(train_x: np.ndarray, test_x: np.ndarray) -> ty
     test_x_AREA = np.zeros((test_x.shape[0],), dtype=bool)
 
     #TODO: Extract the city_area information from the training and test features
-    
-    # --- shuffle the data? ------
-    #np.random.seed(43)
-    #np.random.shuffle(train_x)
-    #np.random.shuffle(test_x)
 
     train_x_2D = train_x[:,[0,1]]
     train_x_AREA = train_x[:, 2] 
@@ -277,8 +272,16 @@ def main():
     train_y = np.loadtxt('train_y.csv', delimiter=',', skiprows=1)
     test_x = np.loadtxt('test_x.csv', delimiter=',', skiprows=1)
 
+    # shuffle data
+    np.random.seed(43)
+    idx = np.arange(0,train_x.shape[0], 1)
+    np.random.shuffle(idx)
+    train_x, train_y = train_x[idx,:] , train_y[idx]
+
     # Extract the city_area information
     train_x_2D, train_x_AREA, test_x_2D, test_x_AREA = extract_city_area_information(train_x, test_x)
+    
+    
     # Fit the model
     print('Fitting model')
     model = Model()
