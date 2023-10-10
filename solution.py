@@ -108,9 +108,16 @@ class Model(object):
         # TODO: Fit your model here
         print("Shape of training data", train_x_2D.shape)
 
-        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 2000)
-        subsampled_x = train_x_2D[subsampled_indices]
-        subsampled_y = train_y[subsampled_indices]
+        #Clusters for x
+        clustered_x = DBSCAN(eps=0.01, min_samples=29).fit_predict(train_x_2D)
+        clusters = np.unique(clustered_x)
+        for cluster in clusters:
+            row_ix = np.where(clustered_x == cluster)
+            print(row_ix)
+
+        #subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 2000)
+        #subsampled_x = train_x_2D[subsampled_indices]
+        #subsampled_y = train_y[subsampled_indices]
 
         #plt.violinplot([train_x_2D[:,0],subsampled_x[:,0]])
         #plt.savefig("Ion for train vs subsampled train")
@@ -127,10 +134,15 @@ class Model(object):
 
         kernel = Matern(length_scale_bounds=length_scale_bounds)*DotProduct() + ConstantKernel() + WhiteKernel() 
         noise_std = 10
-        self.gpr = GaussianProcessRegressor(kernel=kernel,
-                                            random_state=0, 
-                                            alpha = noise_std**2,
-                                            n_restarts_optimizer = 5).fit(subsampled_x, subsampled_y)
+        #self.gpr = GaussianProcessRegressor(kernel=kernel,
+        #                                    random_state=0, 
+        #                                    alpha = noise_std**2,
+        #                                    n_restarts_optimizer = 5).fit(subsampled_x, subsampled_y)
+
+        self.gpr = []
+        for cluster in clusters:
+            row_ix = np.where(clustered_x == cluster)
+            self.gpr[cluster+1] = GaussianProcessRegressor(kernel=kernel,random_state=0,alpha = noise_std**2,n_restarts_optimizer = 5).fit(train_x_2D[row_ix], train_y[row_ix])
         
         
         print("Kernel optimized params", self.gpr.kernel_, 
