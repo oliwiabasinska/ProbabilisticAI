@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from sklearn.cluster import DBSCAN
 
 
 # Set `EXTENDED_EVALUATION` to `True` in order to visualize your predictions.
@@ -50,7 +51,7 @@ class Model(object):
         gp_mean, gp_std = self.gpr.predict(test_x_2D, return_std=True)
 
         # TODO: Use the GP posterior to form your predictions here
-        predictions = gp_mean
+        predictions = gp_mean + 1.21*gp_std
 
         return predictions, gp_mean, gp_std
     
@@ -97,7 +98,6 @@ class Model(object):
 
         return kernels[index_max]
 
-
     def fitting_model(self, train_y: np.ndarray,train_x_2D: np.ndarray):
         """
         Fit your model on the given training data.
@@ -108,16 +108,16 @@ class Model(object):
         # TODO: Fit your model here
         print("Shape of training data", train_x_2D.shape)
 
-        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 1000)
+        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 2000)
         subsampled_x = train_x_2D[subsampled_indices]
         subsampled_y = train_y[subsampled_indices]
 
-        plt.violinplot([train_x_2D[:,0],subsampled_x[:,0]])
-        plt.savefig("Ion for train vs subsampled train")
-        plt.clf()
+        #plt.violinplot([train_x_2D[:,0],subsampled_x[:,0]])
+        #plt.savefig("Ion for train vs subsampled train")
+        #plt.clf()
 
-        plt.violinplot([train_x_2D[:,1],subsampled_x[:,1]])
-        plt.savefig("Lat for train vs subsampled train")
+        #plt.violinplot([train_x_2D[:,1],subsampled_x[:,1]])
+        #plt.savefig("Lat for train vs subsampled train")
 
 
         # ---- uncomment to run cross-validation
@@ -125,7 +125,7 @@ class Model(object):
         #kernels = np.array([ DotProduct(), ExpSineSquared(length_scale_bounds=length_scale_bounds), RBF(length_scale_bounds=length_scale_bounds), Matern(length_scale_bounds=length_scale_bounds), RationalQuadratic(length_scale_bounds=length_scale_bounds) ]) + WhiteKernel() + ConstantKernel()
         #kernel = self.cross_val(kernels, subsampled_x, subsampled_y, 5) # get best kernel from cross validation
 
-        kernel = RBF(length_scale_bounds=length_scale_bounds)*DotProduct() + ConstantKernel() + WhiteKernel() 
+        kernel = Matern(length_scale_bounds=length_scale_bounds)*DotProduct() + ConstantKernel() + WhiteKernel() 
         noise_std = 10
         self.gpr = GaussianProcessRegressor(kernel=kernel,
                                             random_state=0, 
@@ -295,23 +295,23 @@ def main():
 
     # make plots for exploratory data analysis
 
-    predictions_x = model.make_predictions(train_x_2D, train_x_AREA) # predictions on the train set itself
+    #predictions_x = model.make_predictions(train_x_2D, train_x_AREA) # predictions on the train set itself
 
-    plt.violinplot((predictions[0], train_y))
-    plt.savefig("predictions distribution.png")
-    plt.clf()
+    #plt.violinplot((predictions[0], train_y))
+    #plt.savefig("predictions distribution.png")
+    #plt.clf()
 
-    plt.violinplot((predictions_x[0], train_y))
-    plt.savefig("predictions made on train_x, vs the actual labels train_y.png")
-    plt.clf()
+    #plt.violinplot((predictions_x[0], train_y))
+    #plt.savefig("predictions made on train_x, vs the actual labels train_y.png")
+    #plt.clf()
 
-    plt.violinplot((train_x_2D[:,0], test_x_2D[:,0]))
-    plt.savefig("Ion concentration on train vs test data.png")
-    plt.clf()
+    #plt.violinplot((train_x_2D[:,0], test_x_2D[:,0]))
+    #plt.savefig("Ion concentration on train vs test data.png")
+    #plt.clf()
 
-    plt.violinplot((train_x_2D[:,1], test_x_2D[:,1]))
-    plt.savefig("Lat on train vs test data.png")
-    plt.clf()
+    #plt.violinplot((train_x_2D[:,1], test_x_2D[:,1]))
+    #plt.savefig("Lat on train vs test data.png")
+    #plt.clf()
 
     #plt.scatter(train_x_2D[:,0], train_y)
     #plt.savefig("[ion] vs pm25.png")
