@@ -31,9 +31,10 @@ class Model(object):
         We already provide a random number generator for reproducibility.
         """
         self.rng = np.random.default_rng(seed=0)
-        self.gpr = []
+        self.gpr = GaussianProcessRegressor()
+        self.alpha = 1.31
 
-        # TODO: Add custom initialization for your model here if necessary
+
 
     def make_predictions(self, test_x_2D: np.ndarray, test_x_AREA: np.ndarray) -> typing.Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -50,9 +51,10 @@ class Model(object):
               "and marginal log likelihood", self.gpr.log_marginal_likelihood_value_)
         gp_mean, gp_std = self.gpr.predict(test_x_2D, return_std=True)
 
+        print("the alpha scaling param used is", self.alpha)
         # TODO: Use the GP posterior to form your predictions here
         predictions = np.zeros(test_x_2D.shape[0])
-        predictions[test_x_AREA==1] = gp_mean[test_x_AREA==1] + 1.21*gp_std[test_x_AREA==1]  #overestimation
+        predictions[test_x_AREA==1] = gp_mean[test_x_AREA==1] + self.alpha*gp_std[test_x_AREA==1]  #overestimation
         predictions[test_x_AREA==0] = gp_mean[test_x_AREA==0] # no overestimation
 
         #predictions = gp_mean + 1.21*gp_std[test_x_AREA==1]
@@ -127,7 +129,7 @@ class Model(object):
         #    row_ix = np.where(clustered_x == cluster)
         #    print(row_ix)
 
-        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 2000)
+        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 500)
         subsampled_x = train_x_2D[subsampled_indices]
         subsampled_y = train_y[subsampled_indices]
 
@@ -150,6 +152,8 @@ class Model(object):
                                             random_state=0, 
                                             alpha = noise_std**2,
                                             n_restarts_optimizer = 5).fit(subsampled_x, subsampled_y)
+        
+        # finding the optimal alpha
 
         #self.gpr = []
         #for cluster in clusters:
@@ -288,9 +292,9 @@ def extract_city_area_information(train_x: np.ndarray, test_x: np.ndarray) -> ty
     test_x_2D = test_x[:,[0,1]]
     test_x_AREA = test_x[:, 2] 
 
-    plt.scatter(train_x_2D[:, 0],train_x_2D[:, 1], c = train_x_AREA )
-    plt.savefig("Coordinates and residential areas")
-    plt.clf()
+    #plt.scatter(train_x_2D[:, 0],train_x_2D[:, 1], c = train_x_AREA )
+    #plt.savefig("Coordinates and residential areas")
+    #plt.clf()
 
 
 
@@ -300,6 +304,30 @@ def extract_city_area_information(train_x: np.ndarray, test_x: np.ndarray) -> ty
     assert train_x_AREA.ndim == 1 and test_x_AREA.ndim == 1
 
     return train_x_2D, train_x_AREA, test_x_2D, test_x_AREA
+
+
+
+def find_optimal_alpha(model, train_x_AREA, train_x_2D, train_y):
+    """
+    Function that finds the optimal scaling parameter alpha for overestimation.
+    
+
+    """
+    alphas = np.linspace(0,10,num=100)
+    min_alpha = 0
+    min_score = 40000
+
+    for a in alphas:
+        gp_mean, gp_std = model.gpr.predict(train_x_2D, return_std=True)
+        predictions = gp_mean + a * gp_std
+        score = cost_function(train_y, predictions, train_x_AREA)
+        if score < min_score:
+            print(score,a)
+            min_score = score
+            min_alpha = a
+
+    return(min_alpha)
+
 
 # you don't have to change this function
 def main():
@@ -314,9 +342,9 @@ def main():
     np.random.shuffle(idx)
     train_x, train_y = train_x[idx,:] , train_y[idx]
 
-    plt.scatter(train_x[:, 0],train_x[:, 1], c = train_y )
-    plt.savefig("Coordinates colored by pollution level")
-    plt.clf()
+    #plt.scatter(train_x[:, 0],train_x[:, 1], c = train_y )
+   # plt.savefig("Coordinates colored by pollution level")
+   # plt.clf()
 
     # Extract the city_area information
     train_x_2D, train_x_AREA, test_x_2D, test_x_AREA = extract_city_area_information(train_x, test_x)
@@ -328,10 +356,15 @@ def main():
     model = Model()
     model.fitting_model(train_y,train_x_2D)
 
+    # find optimal alpha
+    min_alpha = find_optimal_alpha(model, train_x_AREA, train_x_2D, train_y)
+    model.alpha = min_alpha
+
     # Predict on the test features
     print('Predicting on test features')
     predictions = model.make_predictions(test_x_2D, test_x_AREA)
     print(predictions)
+
 
     # make plots for exploratory data analysis
 
