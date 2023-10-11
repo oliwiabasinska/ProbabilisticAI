@@ -55,7 +55,7 @@ class Model(object):
         predictions[test_x_AREA==1] = gp_mean[test_x_AREA==1] + 1.21*gp_std[test_x_AREA==1]  #overestimation
         predictions[test_x_AREA==0] = gp_mean[test_x_AREA==0] # no overestimation
 
-        predictions = gp_mean + 1.21*gp_std[test_x_AREA==1]
+        #predictions = gp_mean + 1.21*gp_std[test_x_AREA==1]
 
         # plots
         plt.scatter(test_x_2D[:, 0],test_x_2D[:, 1], c = test_x_AREA )
