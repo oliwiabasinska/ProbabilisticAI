@@ -133,6 +133,15 @@ class Model(object):
         subsampled_x = train_x_2D[subsampled_indices]
         subsampled_y = train_y[subsampled_indices]
 
+
+        k = 2000  # Number of clusters / new datapoints
+        kmedoids = KMedoids(n_clusters=k)
+        kmedoids.fit(train_x_2D)
+
+        subsampled_x = train_x_2D[kmedoids.medoid_indices_]
+        subsampled_y = train_y[kmedoids.medoid_indices_]
+
+
         #plt.violinplot([train_x_2D[:,0],subsampled_x[:,0]])
         #plt.savefig("Ion for train vs subsampled train")
         #plt.clf()
