@@ -31,7 +31,7 @@ class Model(object):
         We already provide a random number generator for reproducibility.
         """
         self.rng = np.random.default_rng(seed=0)
-        self.gpr = GaussianProcessRegressor()
+        self.gpr = []
 
         # TODO: Add custom initialization for your model here if necessary
 
@@ -51,7 +51,21 @@ class Model(object):
         gp_mean, gp_std = self.gpr.predict(test_x_2D, return_std=True)
 
         # TODO: Use the GP posterior to form your predictions here
-        predictions = gp_mean + 1.21*gp_std
+        predictions = np.zeros(test_x_2D.shape[0])
+        predictions[test_x_AREA==1] = gp_mean[test_x_AREA==1] + 1.21*gp_std[test_x_AREA==1]  #overestimation
+        predictions[test_x_AREA==0] = gp_mean[test_x_AREA==0] # no overestimation
+
+        predictions = gp_mean + 1.21*gp_std[test_x_AREA==1]
+
+        # plots
+        plt.scatter(test_x_2D[:, 0],test_x_2D[:, 1], c = test_x_AREA )
+        plt.savefig("Test coordinates and residential areas")
+        plt.clf()
+
+
+        plt.scatter(test_x_2D[:, 0],test_x_2D[:, 1], c = predictions )
+        plt.savefig("Test coordinates colored by predicted pollution level")
+        plt.clf()
 
         return predictions, gp_mean, gp_std
     
@@ -105,19 +119,17 @@ class Model(object):
         :param train_y: Training pollution concentrations as a 1d NumPy float array of shape (NUM_SAMPLES,)
         """
 
-        # TODO: Fit your model here
-        print("Shape of training data", train_x_2D.shape)
+        # Clusters for x
+        #clustered_x = DBSCAN(eps=0.01, min_samples=29).fit_predict(train_x_2D)
+        #clusters = np.unique(clustered_x)
+        #print("total number of clusters: ", len(clusters))
+        #for cluster in clusters:
+        #    row_ix = np.where(clustered_x == cluster)
+        #    print(row_ix)
 
-        #Clusters for x
-        clustered_x = DBSCAN(eps=0.01, min_samples=29).fit_predict(train_x_2D)
-        clusters = np.unique(clustered_x)
-        for cluster in clusters:
-            row_ix = np.where(clustered_x == cluster)
-            print(row_ix)
-
-        #subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 2000)
-        #subsampled_x = train_x_2D[subsampled_indices]
-        #subsampled_y = train_y[subsampled_indices]
+        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 2000)
+        subsampled_x = train_x_2D[subsampled_indices]
+        subsampled_y = train_y[subsampled_indices]
 
         #plt.violinplot([train_x_2D[:,0],subsampled_x[:,0]])
         #plt.savefig("Ion for train vs subsampled train")
@@ -134,15 +146,19 @@ class Model(object):
 
         kernel = Matern(length_scale_bounds=length_scale_bounds)*DotProduct() + ConstantKernel() + WhiteKernel() 
         noise_std = 10
-        #self.gpr = GaussianProcessRegressor(kernel=kernel,
-        #                                    random_state=0, 
-        #                                    alpha = noise_std**2,
-        #                                    n_restarts_optimizer = 5).fit(subsampled_x, subsampled_y)
+        self.gpr = GaussianProcessRegressor(kernel=kernel,
+                                            random_state=0, 
+                                            alpha = noise_std**2,
+                                            n_restarts_optimizer = 5).fit(subsampled_x, subsampled_y)
 
-        self.gpr = []
-        for cluster in clusters:
-            row_ix = np.where(clustered_x == cluster)
-            self.gpr[cluster+1] = GaussianProcessRegressor(kernel=kernel,random_state=0,alpha = noise_std**2,n_restarts_optimizer = 5).fit(train_x_2D[row_ix], train_y[row_ix])
+        #self.gpr = []
+        #for cluster in clusters:
+        #    row_ix = np.where(clustered_x == cluster)
+        #    self.gpr[cluster+1] = GaussianProcessRegressor(kernel=kernel,
+        #                                                   random_state=0,
+        #                                                   alpha = noise_std**2,
+        #                                                   n_restarts_optimizer = 5).fit(train_x_2D[row_ix], 
+        #                                                                                 train_y[row_ix])
         
         
         print("Kernel optimized params", self.gpr.kernel_, 
@@ -272,6 +288,13 @@ def extract_city_area_information(train_x: np.ndarray, test_x: np.ndarray) -> ty
     test_x_2D = test_x[:,[0,1]]
     test_x_AREA = test_x[:, 2] 
 
+    plt.scatter(train_x_2D[:, 0],train_x_2D[:, 1], c = train_x_AREA )
+    plt.savefig("Coordinates and residential areas")
+    plt.clf()
+
+
+
+
     assert train_x_2D.shape[0] == train_x_AREA.shape[0] and test_x_2D.shape[0] == test_x_AREA.shape[0]
     assert train_x_2D.shape[1] == 2 and test_x_2D.shape[1] == 2
     assert train_x_AREA.ndim == 1 and test_x_AREA.ndim == 1
@@ -291,10 +314,15 @@ def main():
     np.random.shuffle(idx)
     train_x, train_y = train_x[idx,:] , train_y[idx]
 
+    plt.scatter(train_x[:, 0],train_x[:, 1], c = train_y )
+    plt.savefig("Coordinates colored by pollution level")
+    plt.clf()
+
     # Extract the city_area information
     train_x_2D, train_x_AREA, test_x_2D, test_x_AREA = extract_city_area_information(train_x, test_x)
     
-    
+    # clustering
+
     # Fit the model
     print('Fitting model')
     model = Model()
@@ -307,7 +335,7 @@ def main():
 
     # make plots for exploratory data analysis
 
-    #predictions_x = model.make_predictions(train_x_2D, train_x_AREA) # predictions on the train set itself
+    predictions_x = model.make_predictions(train_x_2D, train_x_AREA) # predictions on the train set itself
 
     #plt.violinplot((predictions[0], train_y))
     #plt.savefig("predictions distribution.png")
