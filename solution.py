@@ -32,7 +32,7 @@ class Model(object):
         """
         self.rng = np.random.default_rng(seed=0)
         self.gpr = GaussianProcessRegressor()
-        self.alpha = 1.31
+        self.alpha = 1.21
 
 
 
@@ -129,7 +129,7 @@ class Model(object):
         #    row_ix = np.where(clustered_x == cluster)
         #    print(row_ix)
 
-        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 10000)
+        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 5000)
         subsampled_x = train_x_2D[subsampled_indices]
         subsampled_y = train_y[subsampled_indices]
 
@@ -160,6 +160,7 @@ class Model(object):
         self.gpr = GaussianProcessRegressor(kernel=kernel,
                                             random_state=0, 
                                             alpha = noise_std**2,
+                                            #normalize_y = True,
                                             n_restarts_optimizer = 5).fit(subsampled_x, subsampled_y)
         
         # finding the optimal alpha
@@ -366,8 +367,8 @@ def main():
     model.fitting_model(train_y,train_x_2D)
 
     # find optimal alpha
-    min_alpha = find_optimal_alpha(model, train_x_AREA, train_x_2D, train_y)
-    model.alpha = min_alpha
+    #min_alpha = find_optimal_alpha(model, train_x_AREA, train_x_2D, train_y)
+    #model.alpha = min_alpha
 
     # Predict on the test features
     print('Predicting on test features')
@@ -377,7 +378,7 @@ def main():
 
     # make plots for exploratory data analysis
 
-    predictions_x = model.make_predictions(train_x_2D, train_x_AREA) # predictions on the train set itself
+    #predictions_x = model.make_predictions(train_x_2D, train_x_AREA) # predictions on the train set itself
 
     #plt.violinplot((predictions[0], train_y))
     #plt.savefig("predictions distribution.png")
