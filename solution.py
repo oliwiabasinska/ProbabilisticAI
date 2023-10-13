@@ -32,7 +32,20 @@ class Model(object):
         """
         self.rng = np.random.default_rng(seed=0)
         self.gpr = GaussianProcessRegressor()
+        self.gprs = [ [GaussianProcessRegressor() for i in range(4)] for j in range(4) ]
         self.alpha = 1.21
+
+
+    def convert_coordinates(self, train_x_2D):
+
+        transformed_x1 = ( train_x_2D[:,0] / 0.25 ).astype(int)
+        transformed_x2 = ( train_x_2D[:,1] / 0.25 ).astype(int)
+
+        vector = [ str(transformed_x1[i])+str(transformed_x2[i]) for i in range(train_x_2D.shape[0])]
+
+        print("preview of vector of ints:", vector[0:5])
+
+        return np.array(vector)
 
 
 
@@ -47,11 +60,22 @@ class Model(object):
         """
 
         # TODO: Use your GP to estimate the posterior mean and stddev for each city_area here
-        print("Trained GPR has", self.gpr.kernel_, 
-              "and marginal log likelihood", self.gpr.log_marginal_likelihood_value_)
+        # print("Trained GPR has", self.gpr.kernel, 
+        #       "and marginal log likelihood", self.gpr.log_marginal_likelihood_value_)
         gp_mean, gp_std = self.gpr.predict(test_x_2D, return_std=True)
 
         print("the alpha scaling param used is", self.alpha)
+
+        int_coords_test = self.convert_coordinates(test_x_2D) 
+
+        for i in range(len(int_coords_test)):
+            u =  int( int_coords_test[i][0] )
+            v =  int( int_coords_test[i][1] )
+            print("Trained GPR in section", u, v, "has kernel with params:")
+            print(self.gprs[u][v].kernel)
+            gp_mean[i], gp_std[i] = self.gprs[u][v].predict([test_x_2D[i,:]], return_std=True)
+
+
         # TODO: Use the GP posterior to form your predictions here
         predictions = np.zeros(test_x_2D.shape[0])
         predictions[test_x_AREA==1] = gp_mean[test_x_AREA==1] + self.alpha*gp_std[test_x_AREA==1]  #overestimation
@@ -129,9 +153,12 @@ class Model(object):
         #    row_ix = np.where(clustered_x == cluster)
         #    print(row_ix)
 
-        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 5000)
+        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 500)
         subsampled_x = train_x_2D[subsampled_indices]
         subsampled_y = train_y[subsampled_indices]
+
+        int_coords_train = self.convert_coordinates(train_x_2D)
+
 
 
         #k = 2000  # Number of clusters / new datapoints
@@ -157,13 +184,25 @@ class Model(object):
 
         kernel = Matern(length_scale_bounds=length_scale_bounds)*DotProduct() + ConstantKernel() + WhiteKernel() 
         noise_std = 10
-        self.gpr = GaussianProcessRegressor(kernel=kernel,
-                                            random_state=0, 
-                                            alpha = noise_std**2,
-                                            #normalize_y = True,
-                                            n_restarts_optimizer = 5).fit(subsampled_x, subsampled_y)
+        #self.gpr = GaussianProcessRegressor(kernel=kernel,
+        #                                    random_state=0, 
+        #                                    alpha = noise_std**2,
+        #                                    #normalize_y = True,
+        #                                    n_restarts_optimizer = 5).fit(subsampled_x, subsampled_y)
         
         # finding the optimal alpha
+
+        # loop for training GPRs
+
+        for i in range(1):
+            for j in range(1):
+                coord_str = str(i)+str(j)
+                mask = int_coords_train == coord_str
+                print("GPR is being trained on ", sum(mask*1),"samples")
+                self.gprs[i][j]  = GaussianProcessRegressor(kernel=kernel,
+                                            random_state=0, 
+                                            alpha = noise_std**2,
+                                            n_restarts_optimizer = 5).fit(train_x_2D[mask], train_y[mask])
 
         #self.gpr = []
         #for cluster in clusters:
@@ -175,8 +214,8 @@ class Model(object):
         #                                                                                 train_y[row_ix])
         
         
-        print("Kernel optimized params", self.gpr.kernel_, 
-              "with log marginal likelihood", self.gpr.log_marginal_likelihood_value_ )
+        #print("Kernel optimized params", self.gpr.kernel_, 
+        #      "with log marginal likelihood", self.gpr.log_marginal_likelihood_value_ )
 
 # You don't have to change this function
 def cost_function(ground_truth: np.ndarray, predictions: np.ndarray, AREA_idxs: np.ndarray) -> float:
