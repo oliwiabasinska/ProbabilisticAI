@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 import matplotlib.pyplot as plt
 from matplotlib import cm
-from sklearn.cluster import DBSCAN
+from sklearn.cluster import DBSCAN, KMeans
 
 
 # Set `EXTENDED_EVALUATION` to `True` in order to visualize your predictions.
@@ -60,14 +60,14 @@ class Model(object):
         #predictions = gp_mean + 1.21*gp_std[test_x_AREA==1]
 
         # plots
-        plt.scatter(test_x_2D[:, 0],test_x_2D[:, 1], c = test_x_AREA )
-        plt.savefig("Test coordinates and residential areas")
-        plt.clf()
+        #plt.scatter(test_x_2D[:, 0],test_x_2D[:, 1], c = test_x_AREA )
+        #plt.savefig("Test coordinates and residential areas")
+        #plt.clf()
 
 
-        plt.scatter(test_x_2D[:, 0],test_x_2D[:, 1], c = predictions )
-        plt.savefig("Test coordinates colored by predicted pollution level")
-        plt.clf()
+        #plt.scatter(test_x_2D[:, 0],test_x_2D[:, 1], c = predictions )
+        #plt.savefig("Test coordinates colored by predicted pollution level")
+        #plt.clf()
 
         return predictions, gp_mean, gp_std
     
@@ -129,9 +129,22 @@ class Model(object):
         #    row_ix = np.where(clustered_x == cluster)
         #    print(row_ix)
 
-        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 5000)
-        subsampled_x = train_x_2D[subsampled_indices]
-        subsampled_y = train_y[subsampled_indices]
+        #subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 2000)
+        #subsampled_x = train_x_2D[subsampled_indices]
+        #subsampled_y = train_y[subsampled_indices]
+
+        k = 2000 #number of clusters / new datapoints
+        print("train_x:", train_x_2D.shape)
+        print("train_y:", train_y.shape)
+        train_y_reshaped = train_y.reshape(-1,1)
+        data = np.concatenate((train_x_2D, train_y_reshaped), axis = 1)
+        print(data.shape)
+        kmeans = KMeans(n_clusters=k, random_state=69, init='k-means++', n_init="auto").fit(data)
+        centroids = kmeans.cluster_centers_
+        subsampled_y = centroids[:, -1].reshape(-1, 1) #select last column with y values
+        subsampled_x = centroids[:, :-1] #select first two columns with the 2d coordinates
+        print("subsampled_y:", subsampled_y.shape)
+        print("subsampled_x:", subsampled_x.shape)
 
 
         #k = 2000  # Number of clusters / new datapoints
