@@ -129,22 +129,57 @@ class Model(object):
         #    row_ix = np.where(clustered_x == cluster)
         #    print(row_ix)
 
-        #subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 2000)
-        #subsampled_x = train_x_2D[subsampled_indices]
-        #subsampled_y = train_y[subsampled_indices]
+        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 2000)
+        subsampled_x = train_x_2D[subsampled_indices]
+        subsampled_y = train_y[subsampled_indices]
+        print("subsampled_y with random sampling:", subsampled_y.shape)
+        print(subsampled_y)
+        print("subsampled_x by random sampling:", subsampled_x.shape)
+        print(subsampled_x)
 
-        k = 2000 #number of clusters / new datapoints
+
+        #k = 2000 #number of clusters / new datapoints
+        #print("train_x:", train_x_2D.shape)
+        #print("train_y:", train_y.shape)
+        #train_y_reshaped = train_y.reshape(-1,1)
+        #data = np.concatenate((train_x_2D, train_y_reshaped), axis = 1)
+        #print(data.shape)
+        #kmeans = KMeans(n_clusters=k, random_state=69, init='k-means++', n_init="auto").fit(data)
+        #centroids = kmeans.cluster_centers_
+        #subsampled_y = centroids[:, -1].reshape(-1, 1) #select last column with y values
+        #subsampled_y = subsampled_y.flatten()
+        #subsampled_x = centroids[:, :-1] #select first two columns with the 2d coordinates
+        #print("subsampled_y:", subsampled_y.shape)
+        #print(subsampled_y)
+        #print("subsampled_x:", subsampled_x.shape)
+        #print(subsampled_x)
+
+        k = 5000 #number of clusters / new datapoints
         print("train_x:", train_x_2D.shape)
         print("train_y:", train_y.shape)
         train_y_reshaped = train_y.reshape(-1,1)
         data = np.concatenate((train_x_2D, train_y_reshaped), axis = 1)
-        print(data.shape)
-        kmeans = KMeans(n_clusters=k, random_state=69, init='k-means++', n_init="auto").fit(data)
-        centroids = kmeans.cluster_centers_
-        subsampled_y = centroids[:, -1].reshape(-1, 1) #select last column with y values
-        subsampled_x = centroids[:, :-1] #select first two columns with the 2d coordinates
-        print("subsampled_y:", subsampled_y.shape)
+        #print(data.shape)
+        kmeans = KMeans(n_clusters=k, random_state=69, init='k-means++', n_init="auto").fit(train_x_2D)
+        subsampled_x = kmeans.cluster_centers_
         print("subsampled_x:", subsampled_x.shape)
+        print(subsampled_x)
+
+
+        cluster_labels = kmeans.labels_
+        print("cluster_labels:", cluster_labels)
+        cluster_averages = [train_y[cluster_labels == i].mean() for i in range(k)]
+        subsampled_y = np.array(cluster_averages)
+        print("subsampled_y:", subsampled_y.shape)
+        print(subsampled_y)
+
+        #subsampled_y = centroids[:, -1].reshape(-1, 1) #select last column with y values
+        #subsampled_y = subsampled_y.flatten()
+        #subsampled_x = centroids[:, :-1] #select first two columns with the 2d coordinates
+        #print("subsampled_y:", subsampled_y.shape)
+        #print(subsampled_y)
+        #print("subsampled_x:", subsampled_x.shape)
+        #print(subsampled_x)
 
 
         #k = 2000  # Number of clusters / new datapoints
