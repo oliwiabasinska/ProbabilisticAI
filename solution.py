@@ -194,8 +194,8 @@ class Model(object):
 
         # loop for training GPRs
 
-        for i in range(1):
-            for j in range(1):
+        for i in range(4):
+            for j in range(4):
                 coord_str = str(i)+str(j)
                 mask = int_coords_train == coord_str
                 print("GPR is being trained on ", sum(mask*1),"samples")
