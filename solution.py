@@ -7,7 +7,7 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from sklearn.cluster import DBSCAN, KMeans
-
+from sklearn.metrics import pairwise_distances_argmin
 
 # Set `EXTENDED_EVALUATION` to `True` in order to visualize your predictions.
 EXTENDED_EVALUATION = False
@@ -54,7 +54,7 @@ class Model(object):
         print("the alpha scaling param used is", self.alpha)
         # TODO: Use the GP posterior to form your predictions here
         predictions = np.zeros(test_x_2D.shape[0])
-        predictions[test_x_AREA==1] = gp_mean[test_x_AREA==1] + self.alpha*gp_std[test_x_AREA==1]  #overestimation
+        predictions[test_x_AREA==1] = gp_mean[test_x_AREA==1] + (self.alpha)*gp_std[test_x_AREA==1]  #overestimation
         predictions[test_x_AREA==0] = gp_mean[test_x_AREA==0] # no overestimation
 
         #predictions = gp_mean + 1.21*gp_std[test_x_AREA==1]
@@ -129,7 +129,7 @@ class Model(object):
         #    row_ix = np.where(clustered_x == cluster)
         #    print(row_ix)
 
-        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 2000)
+        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 1700)
         subsampled_x = train_x_2D[subsampled_indices]
         subsampled_y = train_y[subsampled_indices]
         print("subsampled_y with random sampling:", subsampled_y.shape)
@@ -154,7 +154,11 @@ class Model(object):
         #print("subsampled_x:", subsampled_x.shape)
         #print(subsampled_x)
 
-        k = 5000 #number of clusters / new datapoints
+        #subsampled_y_1 = subsampled_y
+        #subsampled_x_1= subsampled_x
+
+
+        k = 4000 #number of clusters / new datapoints
         print("train_x:", train_x_2D.shape)
         print("train_y:", train_y.shape)
         train_y_reshaped = train_y.reshape(-1,1)
@@ -166,12 +170,39 @@ class Model(object):
         print(subsampled_x)
 
 
-        cluster_labels = kmeans.labels_
-        print("cluster_labels:", cluster_labels)
-        cluster_averages = [train_y[cluster_labels == i].mean() for i in range(k)]
-        subsampled_y = np.array(cluster_averages)
-        print("subsampled_y:", subsampled_y.shape)
-        print(subsampled_y)
+        centroids = kmeans.cluster_centers_
+
+        selected_indices = []
+
+        # Iterate over each centroid to select the three closest data points
+        for centroid in centroids:
+            distances = np.linalg.norm(train_x_2D - centroid, axis=1)
+            
+            # Get the indices of the three closest data points
+            closest_indices = np.argsort(distances)[:2]
+            #furthest_indices = np.argsort(distances)[:1]
+
+            selected_indices.extend(closest_indices)
+            #selected_indices.extend(furthest_indices)
+
+        selected_indices = np.array(selected_indices)
+
+        subsampled_x = train_x_2D[selected_indices]  
+        subsampled_y = train_y[selected_indices]   
+
+        #cluster_labels = kmeans.labels_
+        #print("cluster_labels:", cluster_labels)
+        #cluster_averages = [train_y[cluster_labels == i].mean() for i in range(k)]
+        #subsampled_y = np.array(cluster_averages)
+        #print("subsampled_y:", subsampled_y.shape)
+        #print(subsampled_y)
+
+        
+        #subsampled_x = np.concatenate((subsampled_x_1, subsampled_x), axis = 0)
+        #print("combi:", subsampled_x.shape)
+        #subsampled_y = np.concatenate((subsampled_y_1, subsampled_y), axis = 0)
+        #print("combi:", subsampled_y.shape)
+
 
         #subsampled_y = centroids[:, -1].reshape(-1, 1) #select last column with y values
         #subsampled_y = subsampled_y.flatten()
