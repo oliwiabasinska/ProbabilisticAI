@@ -30,8 +30,8 @@ class Model(object):
         Initialize your model here.
         We already provide a random number generator for reproducibility.
         """
-        self.rng = np.random.default_rng(seed=0)
-        self.gpr = GaussianProcessRegressor()
+        #self.rng = np.random.default_rng(seed=0)
+        
         self.gprs = [ [GaussianProcessRegressor() for i in range(4)] for j in range(4) ]
         self.alpha = 1.21
 
@@ -59,9 +59,6 @@ class Model(object):
             containing your predictions, the GP posterior mean, and the GP posterior stddev (in that order)
         """
 
-        # TODO: Use your GP to estimate the posterior mean and stddev for each city_area here
-        # print("Trained GPR has", self.gpr.kernel_, 
-        #       "and marginal log likelihood", self.gpr.log_marginal_likelihood_value_)
         predictions,gp_mean, gp_std = np.zeros(test_x_2D.shape[0]), np.zeros(test_x_2D.shape[0]), np.zeros(test_x_2D.shape[0])
 
         print("the alpha scaling param used is", self.alpha)
@@ -86,13 +83,11 @@ class Model(object):
         predictions[test_x_AREA==1] = gp_mean[test_x_AREA==1] + self.alpha*gp_std[test_x_AREA==1]  #overestimation
         predictions[test_x_AREA==0] = gp_mean[test_x_AREA==0] # no overestimation
 
-        #predictions = gp_mean + 1.21*gp_std[test_x_AREA==1]
 
         # plots
         plt.scatter(test_x_2D[:, 0],test_x_2D[:, 1], c = test_x_AREA )
         plt.savefig("Test coordinates and residential areas")
         plt.clf()
-
 
         plt.scatter(test_x_2D[:, 0],test_x_2D[:, 1], c = predictions )
         plt.savefig("Test coordinates colored by predicted pollution level")
@@ -150,54 +145,16 @@ class Model(object):
         :param train_y: Training pollution concentrations as a 1d NumPy float array of shape (NUM_SAMPLES,)
         """
 
-        # Clusters for x
-        #clustered_x = DBSCAN(eps=0.01, min_samples=29).fit_predict(train_x_2D)
-        #clusters = np.unique(clustered_x)
-        #print("total number of clusters: ", len(clusters))
-        #for cluster in clusters:
-        #    row_ix = np.where(clustered_x == cluster)
-        #    print(row_ix)
-
-        subsampled_indices = self.rng.integers(low = 0, high = train_x_2D.shape[0], size = 500)
-        subsampled_x = train_x_2D[subsampled_indices]
-        subsampled_y = train_y[subsampled_indices]
-
         int_coords_train = self.convert_coordinates(train_x_2D)
-
-
-
-        #k = 2000  # Number of clusters / new datapoints
-        #kmedoids = KMedoids(n_clusters=k)
-        #kmedoids.fit(train_x_2D)
-
-        #subsampled_x = train_x_2D[kmedoids.medoid_indices_]
-        #subsampled_y = train_y[kmedoids.medoid_indices_]
-
-
-        #plt.violinplot([train_x_2D[:,0],subsampled_x[:,0]])
-        #plt.savefig("Ion for train vs subsampled train")
-        #plt.clf()
-
-        #plt.violinplot([train_x_2D[:,1],subsampled_x[:,1]])
-        #plt.savefig("Lat for train vs subsampled train")
-
 
         # ---- uncomment to run cross-validation
         length_scale_bounds=(1e-05, 10000000.0)
+
         #kernels = np.array([ DotProduct(), ExpSineSquared(length_scale_bounds=length_scale_bounds), RBF(length_scale_bounds=length_scale_bounds), Matern(length_scale_bounds=length_scale_bounds), RationalQuadratic(length_scale_bounds=length_scale_bounds) ]) + WhiteKernel() + ConstantKernel()
         #kernel = self.cross_val(kernels, subsampled_x, subsampled_y, 5) # get best kernel from cross validation
 
         kernel = Matern(length_scale_bounds=length_scale_bounds)*DotProduct() + ConstantKernel() + WhiteKernel() 
         noise_std = 10
-        #self.gpr = GaussianProcessRegressor(kernel=kernel,
-        #                                    random_state=0, 
-        #                                    alpha = noise_std**2,
-        #                                    #normalize_y = True,
-        #                                    n_restarts_optimizer = 5).fit(subsampled_x, subsampled_y)
-        
-        # finding the optimal alpha
-
-        # loop for training GPRs
 
         for i in range(4):
             for j in range(4):
@@ -208,19 +165,6 @@ class Model(object):
                                             random_state=0, 
                                             alpha = noise_std**2,
                                             n_restarts_optimizer = 5).fit(train_x_2D[mask], train_y[mask])
-
-        #self.gpr = []
-        #for cluster in clusters:
-        #    row_ix = np.where(clustered_x == cluster)
-        #    self.gpr[cluster+1] = GaussianProcessRegressor(kernel=kernel,
-        #                                                   random_state=0,
-        #                                                   alpha = noise_std**2,
-        #                                                   n_restarts_optimizer = 5).fit(train_x_2D[row_ix], 
-        #                                                                                 train_y[row_ix])
-        
-        
-        #print("Kernel optimized params", self.gpr.kernel_, 
-        #      "with log marginal likelihood", self.gpr.log_marginal_likelihood_value_ )
 
 # You don't have to change this function
 def cost_function(ground_truth: np.ndarray, predictions: np.ndarray, AREA_idxs: np.ndarray) -> float:
@@ -339,19 +283,10 @@ def extract_city_area_information(train_x: np.ndarray, test_x: np.ndarray) -> ty
     test_x_2D = np.zeros((test_x.shape[0], 2), dtype=float)
     test_x_AREA = np.zeros((test_x.shape[0],), dtype=bool)
 
-    #TODO: Extract the city_area information from the training and test features
-
     train_x_2D = train_x[:,[0,1]]
     train_x_AREA = train_x[:, 2] 
     test_x_2D = test_x[:,[0,1]]
     test_x_AREA = test_x[:, 2] 
-
-    #plt.scatter(train_x_2D[:, 0],train_x_2D[:, 1], c = train_x_AREA )
-    #plt.savefig("Coordinates and residential areas")
-    #plt.clf()
-
-
-
 
     assert train_x_2D.shape[0] == train_x_AREA.shape[0] and test_x_2D.shape[0] == test_x_AREA.shape[0]
     assert train_x_2D.shape[1] == 2 and test_x_2D.shape[1] == 2
@@ -390,70 +325,34 @@ def main():
     train_y = np.loadtxt('train_y.csv', delimiter=',', skiprows=1)
     test_x = np.loadtxt('test_x.csv', delimiter=',', skiprows=1)
 
-    # shuffle data
-    np.random.seed(43)
-    idx = np.arange(0,train_x.shape[0], 1)
-    np.random.shuffle(idx)
-    train_x, train_y = train_x[idx,:] , train_y[idx]
-
-    #plt.scatter(train_x[:, 0],train_x[:, 1], c = train_y )
-   # plt.savefig("Coordinates colored by pollution level")
-   # plt.clf()
-
     # Extract the city_area information
     train_x_2D, train_x_AREA, test_x_2D, test_x_AREA = extract_city_area_information(train_x, test_x)
     
-    # clustering
+    # Make visualization on the training data 
+    
+    #plt.scatter(train_x_2D[:, 0],train_x_2D[:, 1], c = train_x_AREA )
+    #plt.savefig("Coordinates and residential areas")
+    #plt.clf()
+
+    #plt.scatter(train_x_2D[:, 0],train_x_2D[:, 1], c = train_y )
+    #plt.savefig("Coordinates colored by pollution level")
+    #plt.clf()
+
 
     # Fit the model
     print('Fitting model')
     model = Model()
     model.fitting_model(train_y,train_x_2D)
 
-    # find optimal alpha
-    #min_alpha = find_optimal_alpha(model, train_x_AREA, train_x_2D, train_y)
-    #model.alpha = min_alpha
+    # ------ find optimal alpha
+    min_alpha = find_optimal_alpha(model, train_x_AREA, train_x_2D, train_y)
+    print( "min alpha found to be:", min_alpha)
 
     # Predict on the test features
     print('Predicting on test features')
     predictions = model.make_predictions(test_x_2D, test_x_AREA)
     print(predictions)
 
-
-    # make plots for exploratory data analysis
-
-    #predictions_x = model.make_predictions(train_x_2D, train_x_AREA) # predictions on the train set itself
-
-    #plt.violinplot((predictions[0], train_y))
-    #plt.savefig("predictions distribution.png")
-    #plt.clf()
-
-    #plt.violinplot((predictions_x[0], train_y))
-    #plt.savefig("predictions made on train_x, vs the actual labels train_y.png")
-    #plt.clf()
-
-    #plt.violinplot((train_x_2D[:,0], test_x_2D[:,0]))
-    #plt.savefig("Ion concentration on train vs test data.png")
-    #plt.clf()
-
-    #plt.violinplot((train_x_2D[:,1], test_x_2D[:,1]))
-    #plt.savefig("Lat on train vs test data.png")
-    #plt.clf()
-
-    #plt.scatter(train_x_2D[:,0], train_y)
-    #plt.savefig("[ion] vs pm25.png")
-    #plt.clf()
-
-    #plt.scatter(train_x_2D[:,1], train_y)
-    #plt.savefig("lat vs pm25.png")
-    #plt.clf()
-
-    #plt.violinplot((train_x_2D[:,0], test_x_2D[:,0]))
-    #plt.savefig("Ions distribution for training and test data.png")
-    #plt.clf()
-
-    #plt.violinplot((train_x_2D[:,1], test_x_2D[:,1]))
-    #plt.savefig("Latitude distribution for training and test data.png")
 
     if EXTENDED_EVALUATION:
         perform_extended_evaluation(model, output_dir='.')
