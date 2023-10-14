@@ -81,6 +81,9 @@ class Model(object):
 
         print("------Iterating for", len(test_cluster_labels), "-clusters and the shape of test is", test_x_2D.shape)
 
+        plt.scatter(test_x_2D[:, 0], test_x_2D[:, 1], c =  test_cluster_labels)
+        plt.savefig("test_with_labels.png")
+        plt.clf()
 
         for cluster in range(self.k):
             mask = cluster == test_cluster_labels
@@ -95,14 +98,14 @@ class Model(object):
         #predictions = gp_mean + 1.21*gp_std[test_x_AREA==1]
 
         # plots
-        plt.scatter(test_x_2D[:, 0],test_x_2D[:, 1], c = test_x_AREA )
-        plt.savefig("Test coordinates and residential areas")
-        plt.clf()
+        #plt.scatter(test_x_2D[:, 0],test_x_2D[:, 1], c = test_x_AREA )
+        #plt.savefig("Test coordinates and residential areas")
+        #plt.clf()
 
 
-        plt.scatter(test_x_2D[:, 0],test_x_2D[:, 1], c = predictions )
-        plt.savefig("Test coordinates colored by predicted pollution level")
-        plt.clf()
+        #plt.scatter(test_x_2D[:, 0],test_x_2D[:, 1], c = predictions )
+        #plt.savefig("Test coordinates colored by predicted pollution level")
+        #plt.clf()
 
         return predictions, gp_mean, gp_std
     
@@ -184,14 +187,22 @@ class Model(object):
         kernel = Matern(length_scale_bounds=length_scale_bounds)*DotProduct() + ConstantKernel() + WhiteKernel() 
         noise_std = 10
 
+        print("train_2_2D.shape:", train_x_2D.shape)
+        print("labels.size:", labels.size)
+
+        plt.scatter(train_x_2D[:, 0], train_x_2D[:, 1], c =  labels)
+        plt.savefig("train2D_with_labels.png")
+        plt.clf()
+
         for cluster in range(self.k):
             train_k = train_x_2D[labels == cluster]
             y_k = train_y[labels == cluster]
             self.cluster_gprs[cluster] = GaussianProcessRegressor(kernel=kernel, random_state=69, alpha = noise_std**2, n_restarts_optimizer=5).fit(train_k, y_k)
+            print("Cluster:", cluster)
+            print("size:", y_k.shape)
 
         self.fiveNN.fit(train_x_2D, labels)
         
-
 
         #k = 2000  # Number of clusters / new datapoints
         #kmedoids = KMedoids(n_clusters=k)
@@ -471,9 +482,6 @@ def main():
     #plt.savefig("[ion] vs pm25.png")
     #plt.clf()
 
-    #plt.scatter(train_x_2D[:,1], train_y)
-    #plt.savefig("lat vs pm25.png")
-    #plt.clf()
 
     #plt.violinplot((train_x_2D[:,0], test_x_2D[:,0]))
     #plt.savefig("Ions distribution for training and test data.png")
