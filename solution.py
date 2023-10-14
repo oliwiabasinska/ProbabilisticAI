@@ -62,17 +62,22 @@ class Model(object):
         # TODO: Use your GP to estimate the posterior mean and stddev for each city_area here
         # print("Trained GPR has", self.gpr.kernel, 
         #       "and marginal log likelihood", self.gpr.log_marginal_likelihood_value_)
-        gp_mean, gp_std = self.gpr.predict(test_x_2D, return_std=True)
+        predictions,gp_mean, gp_std = np.zeros(test_x_2D.shape[0]), np.zeros(test_x_2D.shape[0]), np.zeros(test_x_2D.shape[0])
 
         print("the alpha scaling param used is", self.alpha)
 
         int_coords_test = self.convert_coordinates(test_x_2D) 
 
+        print("------Printing trained kernel information:")
+        for u in range(4):
+            for v in range(4):
+                print("Trained GPR in section", u, v, "has kernel with params:")
+                print((self.gprs[u][v]).kernel_)
+
+        print("------Iterating for", len(int_coords_test), "and the shape of test is", test_x_2D.shape)
         for i in range(len(int_coords_test)):
             u =  int( int_coords_test[i][0] )
             v =  int( int_coords_test[i][1] )
-            print("Trained GPR in section", u, v, "has kernel with params:")
-            print(self.gprs[u][v].kernel)
             gp_mean[i], gp_std[i] = self.gprs[u][v].predict([test_x_2D[i,:]], return_std=True)
 
 
