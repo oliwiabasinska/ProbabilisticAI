@@ -60,7 +60,7 @@ class Model(object):
         """
 
         # TODO: Use your GP to estimate the posterior mean and stddev for each city_area here
-        # print("Trained GPR has", self.gpr.kernel, 
+        # print("Trained GPR has", self.gpr.kernel_, 
         #       "and marginal log likelihood", self.gpr.log_marginal_likelihood_value_)
         predictions,gp_mean, gp_std = np.zeros(test_x_2D.shape[0]), np.zeros(test_x_2D.shape[0]), np.zeros(test_x_2D.shape[0])
 
