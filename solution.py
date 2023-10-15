@@ -78,15 +78,7 @@ class Model(object):
                 mask = int_coords_test == coord_str
                 test_x_subset = test_x_2D[mask]
                 a, b = self.gprs[u][v].predict(test_x_subset, return_std=True)
-                #print("a", a)
-                #print("b", b)
                 gp_mean[mask], gp_std[mask] = self.gprs[u][v].predict(test_x_subset, return_std=True)
-
-        
-        # for i in range(len(int_coords_test)):
-        #     u =  int( int_coords_test[i][0] )
-        #     v =  int( int_coords_test[i][1] )
-        #     gp_mean[i], gp_std[i] = self.gprs[u][v].predict([test_x_2D[i,:]], return_std=True)
 
 
         # TODO: Use the GP posterior to form your predictions here
@@ -351,7 +343,7 @@ def main():
     model = Model()
     model.fitting_model(train_y, train_x_2D)
 
-    # ------ find optimal alpha
+    # Find optimal alpha
     #min_alpha = find_optimal_alpha(model, train_x_AREA, train_x_2D, train_y)
     #print( "min alpha found to be:", min_alpha) # it is 1.31
     #model.alpha = min_alpha
