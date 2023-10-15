@@ -33,7 +33,7 @@ class Model(object):
         #self.rng = np.random.default_rng(seed=0)
         
         self.gprs = [ [GaussianProcessRegressor() for i in range(4)] for j in range(4) ]
-        self.alpha = 1.21
+        self.alpha = 1.31
 
 
     def convert_coordinates(self, train_x_2D):
@@ -46,7 +46,6 @@ class Model(object):
         print("preview of vector of ints:", vector[0:5])
 
         return np.array(vector)
-
 
 
     def make_predictions(self, test_x_2D: np.ndarray, test_x_AREA: np.ndarray) -> typing.Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -72,10 +71,22 @@ class Model(object):
                 print((self.gprs[u][v]).kernel_)
 
         print("------Iterating for", len(int_coords_test), "and the shape of test is", test_x_2D.shape)
-        for i in range(len(int_coords_test)):
-            u =  int( int_coords_test[i][0] )
-            v =  int( int_coords_test[i][1] )
-            gp_mean[i], gp_std[i] = self.gprs[u][v].predict([test_x_2D[i,:]], return_std=True)
+        
+        for u in range(4):
+            for v in range(4):
+                coord_str = str(u)+str(v)
+                mask = int_coords_test == coord_str
+                test_x_subset = test_x_2D[mask]
+                a, b = self.gprs[u][v].predict(test_x_subset, return_std=True)
+                #print("a", a)
+                #print("b", b)
+                gp_mean[mask], gp_std[mask] = self.gprs[u][v].predict(test_x_subset, return_std=True)
+
+        
+        # for i in range(len(int_coords_test)):
+        #     u =  int( int_coords_test[i][0] )
+        #     v =  int( int_coords_test[i][1] )
+        #     gp_mean[i], gp_std[i] = self.gprs[u][v].predict([test_x_2D[i,:]], return_std=True)
 
 
         # TODO: Use the GP posterior to form your predictions here
@@ -95,7 +106,6 @@ class Model(object):
 
         return predictions, gp_mean, gp_std
     
-    # cross val for kernel
 
     def cross_val(self, kernels, X, y, k):
         """
@@ -138,6 +148,7 @@ class Model(object):
 
         return kernels[index_max]
 
+    
     def fitting_model(self, train_y: np.ndarray,train_x_2D: np.ndarray):
         """
         Fit your model on the given training data.
@@ -188,7 +199,6 @@ def cost_function(ground_truth: np.ndarray, predictions: np.ndarray, AREA_idxs: 
 
     # Weigh the cost and return the average
     return np.mean(cost * weights)
-
 
 # You don't have to change this function
 def is_in_circle(coor, circle_coor):
@@ -295,20 +305,18 @@ def extract_city_area_information(train_x: np.ndarray, test_x: np.ndarray) -> ty
     return train_x_2D, train_x_AREA, test_x_2D, test_x_AREA
 
 
-
 def find_optimal_alpha(model, train_x_AREA, train_x_2D, train_y):
     """
     Function that finds the optimal scaling parameter alpha for overestimation.
     
-
     """
-    alphas = np.linspace(0,10,num=100)
-    min_alpha = 0
+    alphas = np.linspace(0, 10, num=100)
+    min_alpha = 1.31
     min_score = 40000
 
     for a in alphas:
-        gp_mean, gp_std = model.gpr.predict(train_x_2D, return_std=True)
-        predictions = gp_mean + a * gp_std
+        model.alpha = a # change the model parameter alpha
+        predictions, gp_mean, gp_std = model.make_predictions(train_x_2D, train_x_AREA)
         score = cost_function(train_y, predictions, train_x_AREA)
         if score < min_score:
             print(score,a)
@@ -338,15 +346,15 @@ def main():
     #plt.savefig("Coordinates colored by pollution level")
     #plt.clf()
 
-
     # Fit the model
     print('Fitting model')
     model = Model()
-    model.fitting_model(train_y,train_x_2D)
+    model.fitting_model(train_y, train_x_2D)
 
     # ------ find optimal alpha
-    min_alpha = find_optimal_alpha(model, train_x_AREA, train_x_2D, train_y)
-    print( "min alpha found to be:", min_alpha)
+    #min_alpha = find_optimal_alpha(model, train_x_AREA, train_x_2D, train_y)
+    #print( "min alpha found to be:", min_alpha) # it is 1.31
+    #model.alpha = min_alpha
 
     # Predict on the test features
     print('Predicting on test features')
