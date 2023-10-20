@@ -344,9 +344,9 @@ def main():
     model.fitting_model(train_y, train_x_2D)
 
     # Find optimal alpha
-    #min_alpha = find_optimal_alpha(model, train_x_AREA, train_x_2D, train_y)
-    #print( "min alpha found to be:", min_alpha) # it is 1.31
-    #model.alpha = min_alpha
+    min_alpha = find_optimal_alpha(model, train_x_AREA, train_x_2D, train_y)
+    print( "min alpha found to be:", min_alpha) # it is 1.31
+    model.alpha = min_alpha
 
     # Predict on the test features
     print('Predicting on test features')
